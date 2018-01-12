@@ -35,7 +35,8 @@ def read_labels():
     """
     :return: A Pandas DataFrame with all rec_id's and string of the corresponding labels (separated with commas)
     """
-    with open(path_to_data_set + 'essential_data\\rec_labels_test_hidden.txt') as f:
+    # with open(path_to_data_set + 'essential_data\\rec_labels_test_hidden.txt') as f:
+    with open(path_to_data_set + 'essential_data\\bag_labels.txt') as f:
         lines = f.readlines()[1:]
         data = {'rec_id': [], 'labels': []}
         for line in lines:
@@ -73,4 +74,26 @@ def read_data_and_labels():
     train_indices = folds.loc[folds['fold'] == 0].index
     test_indices = folds.loc[folds['fold'] == 1].index
     return data.iloc[train_indices], labels.iloc[train_indices], data.iloc[test_indices], labels.iloc[test_indices]
+
+
+if __name__ == '__main__':
+    train_data, train_labels, test_data, test_labels = read_data_and_labels()
+
+    print(read_species_list())
+
+    print('\nTrain Data')
+    print(train_data.head())
+    print(train_data.shape)
+
+    print('\nTrain Labels')
+    print(train_labels.head())
+    print(train_labels.shape)
+
+    print('\nTest Data')
+    print(test_data.head())
+    print(test_data.shape)
+
+    print('\nTest Labels')
+    print(test_labels.head())
+    print(test_labels.shape)
 
