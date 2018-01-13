@@ -2,6 +2,7 @@ import csv
 
 import keras
 import numpy as np
+from sklearn import metrics
 import soundfile as sf
 from scipy import signal
 import matplotlib.pyplot as plt
@@ -56,8 +57,19 @@ def get_labels():
                             id = int(b)
                             data[id] = 1.
                         except ValueError:
-                            print('continue')
+                            continue
                 result[s[0]] = data
+        return result
+
+def get_roc_labels():
+    with open('data/mlsp_contest_dataset/essential_data/bag_labels.txt', 'r') as file:
+        result = dict()
+        file.readline()
+        for x in file:
+            if '?' not in x:
+                x = x.rstrip('\n')
+                s = x.split(',')
+                result[s[0]] = s[1:]
         return result
 
 def get_training_filenames():
@@ -70,32 +82,33 @@ def get_test_filenames():
     test_ids = get_test_ids()
     return [filenames.get(x) for x in test_ids]
 
+def preprocess_wav(wav, sr):
+    f, t, Sxx = signal.spectrogram(wav, sr, window=signal.get_window('hamming', 512))
+    # data = []
+    # for x in range(t.shape[0]):
+    #     t1 = []
+    #     for y in range(f.shape[0]):
+    #         t1.append([f[y], Sxx[y][x]])
+    #     data.append(t1)
+    # data = np.array(data)
+    return np.transpose(np.array(Sxx))
+
 def get_training_data():
     result = []
     train_files = get_training_filenames()
     for file in train_files:
-        data, samplerate = sf.read('data/mlsp_contest_dataset/essential_data/src_wavs/'+ file + '.wav')
-        f, t, Sxx = signal.spectrogram(data, samplerate)
-        data = []
-        for x in range(f.shape[0]):
-            for y in range(t.shape[0]):
-                data.append([f[x], t[y], Sxx[x][y]])
-        data = np.array(data)
-        result.append(data)
+        wav, samplerate = sf.read('data/mlsp_contest_dataset/essential_data/src_wavs/'+ file + '.wav')
+
+        result.append(preprocess_wav(wav, samplerate))
     return np.array(result)
 
 def get_test_data():
     result = []
     test_files = get_test_filenames()
     for file in test_files:
-        data, samplerate = sf.read('data/mlsp_contest_dataset/essential_data/src_wavs/'+ file + '.wav')
-        f, t, Sxx = signal.spectrogram(data, samplerate)
-        data = []
-        for x in range(f.shape[0]):
-            for y in range(t.shape[0]):
-                data.append([f[x], t[y], Sxx[x][y]])
-        data = np.array(data)
-        result.append(data)
+        wav, samplerate = sf.read('data/mlsp_contest_dataset/essential_data/src_wavs/'+ file + '.wav')
+
+        result.append(preprocess_wav(wav, samplerate))
     return np.array(result)
 
 def get_training_labels():
@@ -108,16 +121,22 @@ def get_test_labels():
     test_ids = get_test_ids()
     return np.array([labels.get(x) for x in test_ids])
 
+
+def get_roc_test_labels():
+    labels = get_roc_labels()
+    test_ids = get_test_ids()
+    return np.array([labels.get(x) for x in test_ids])
+
 #
 
 
 labels = get_training_labels()
 
-print(labels)
+# print(labels)
 
 features = get_training_data()
 
-# print(features.shape)
+print(features.shape)
 
 print("Done extracting data")
 
@@ -130,16 +149,17 @@ print("Done extracting data")
 
 from keras.models import Sequential
 
-from keras.layers import Dense, Activation, Flatten, Reshape
+from keras.layers import Dense, Activation, Flatten, Reshape, LSTM
 
 model = Sequential([
-    Dense(32, input_shape=(features.shape[1], features.shape[2])),
+    LSTM(320, input_shape=(features.shape[1], features.shape[2])),
     Activation('relu'),
-    Flatten(),
-    Dense(19)
+    Dense(200),
+    Activation('relu'),
+    Dense(19, activation='softmax')
 ])
 
-model.compile(loss='categorical_crossentropy',
+model.compile(loss='mean_squared_error',
               optimizer='sgd',
               metrics=['accuracy'])
 
@@ -152,4 +172,9 @@ test_labels = get_test_labels()
 
 test_features = get_test_data()
 
-print(model.evaluate(test_features, test_labels))
+predictions = model.predict(test_features)
+true_labels = get_roc_test_labels()
+print(true_labels.shape)
+roc = metrics.roc_auc_score(test_labels, predictions)
+print("AUC: {}".format(roc))
+
