@@ -1,5 +1,6 @@
 import pandas as pd
 import soundfile as sf
+import numpy as np
 
 path_to_data_set = 'data\\mlsp_contest_dataset\\'
 
@@ -37,16 +38,15 @@ def read_labels():
     """
     # with open(path_to_data_set + 'essential_data\\rec_labels_test_hidden.txt') as f:
     with open(path_to_data_set + 'essential_data\\bag_labels.txt') as f:
-        lines = f.readlines()[1:]
         data = {'rec_id': [], 'labels': []}
-        for line in lines:
-            line = line.replace('\n', '')
-            entries = line.split(',', 1)
+        for line in f.readlines()[1:]:      # Skip header
+            line = line.replace('\n', '')   # Remove \n
+            entries = line.split(',', 1)    # Split from index
             data['rec_id'].append(int(entries[0]))
-            if len(entries) == 1:
-                data['labels'].append('')
+            if len(entries) == 1 or entries[1] == '':
+                data['labels'].append(np.array([]))
             else:
-                data['labels'].append(entries[1])
+                data['labels'].append(np.array([int(s) for s in entries[1].split(',')]))
         return pd.DataFrame(data).set_index('rec_id')
 
 
