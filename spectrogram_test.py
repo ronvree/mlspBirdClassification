@@ -4,9 +4,9 @@ import numpy as np
 
 from scipy import signal
 
-from read_data import read_data_and_labels, read_species_list
+from read_data import read_data_and_labels_by_folds, read_species_list
 
-train_data, train_labels, test_data, test_labels = read_data_and_labels()
+train_data, train_labels, test_data, test_labels = read_data_and_labels_by_folds()
 
 species = read_species_list()
 number_of_species = len(species)
