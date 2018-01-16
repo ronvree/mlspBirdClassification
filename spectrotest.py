@@ -84,14 +84,13 @@ def get_test_filenames():
 
 def preprocess_wav(wav, sr):
     f, t, Sxx = signal.spectrogram(wav, sr, window=signal.get_window('hamming', 512))
-    # data = []
-    # for x in range(t.shape[0]):
-    #     t1 = []
-    #     for y in range(f.shape[0]):
-    #         t1.append([f[y], Sxx[y][x]])
-    #     data.append(t1)
-    # data = np.array(data)
-    return np.transpose(np.array(Sxx))
+    wav = np.zeros((f.shape[0], t.shape[0], 3))
+    for freqI in range(f.shape[0]):
+        for timeI in range(t.shape[0]):
+            wav[freqI][timeI] = np.array([f[freqI], t[timeI], Sxx[freqI][timeI]])
+    return wav
+
+    # return np.transpose(np.array(Sxx))
 
 def get_training_data():
     result = []
@@ -132,11 +131,31 @@ def get_roc_test_labels():
 
 labels = get_training_labels()
 
-# print(labels)
+print(labels)
 
 features = get_training_data()
 
-print(features.shape)
+new_features = []
+new_labels = []
+
+for wav in range(labels.shape[0]):
+    feat = features[wav]
+
+    for b in range(labels.shape[1]):
+        if labels[wav][b] > 0:
+            lab = np.zeros(labels[wav].shape)
+            lab[b] = 1.
+            new_labels.append(lab)
+            new_features.append(feat)
+
+new_features = np.array(new_features)
+new_labels = np.array(new_labels)
+
+
+input_shape = (new_features.shape[1], new_features.shape[2], new_features.shape[3])
+num_classes = 19
+print(new_features.shape, "Features")
+print(new_labels.shape, "Labels")
 
 print("Done extracting data")
 
@@ -149,21 +168,40 @@ print("Done extracting data")
 
 from keras.models import Sequential
 
-from keras.layers import Dense, Activation, Flatten, Reshape, LSTM
+from keras.layers import Dense, Activation, Flatten, Reshape, LSTM, Conv2D, MaxPooling2D, Dropout
 
-model = Sequential([
-    LSTM(320, input_shape=(features.shape[1], features.shape[2])),
-    Activation('relu'),
-    Dense(200),
-    Activation('relu'),
-    Dense(19, activation='softmax')
-])
+# model = Sequential([
+#     LSTM(1000, input_shape=(new_features.shape[1], new_features.shape[2])),
+#     Activation('relu'),
+#     Dense(800),
+#     Activation('relu'),
+# Dense(600),
+#     Activation('relu'),
+# Dense(400),
+#     Activation('relu'),
+# Dense(200),
+#     Activation('relu'),
+#
+#     Dense(19, activation='sigmoid')
+# ])
 
-model.compile(loss='mean_squared_error',
+model = Sequential()
+model.add(Conv2D(32, kernel_size=(3, 3),
+                 activation='relu',
+                 input_shape=input_shape))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(num_classes, activation='sigmoid'))
+
+model.compile(loss='categorical_crossentropy',
               optimizer='sgd',
               metrics=['accuracy'])
 
-model.fit(features, labels, epochs=5, batch_size=32, validation_split=0.1)
+model.fit(new_features, new_labels, epochs=5, batch_size=32, validation_split=0.1)
 
 
 
@@ -173,6 +211,7 @@ test_labels = get_test_labels()
 test_features = get_test_data()
 
 predictions = model.predict(test_features)
+print(predictions[1])
 true_labels = get_roc_test_labels()
 print(true_labels.shape)
 roc = metrics.roc_auc_score(test_labels, predictions)
