@@ -64,7 +64,7 @@ def read_wav_files():
     return pd.DataFrame(data).set_index('rec_id')
 
 
-def read_data_and_labels():
+def read_data_and_labels_by_folds():
     """
     :return: A four-tuple of Pandas DataFrames: (train data, train labels, test data, test labels)
     """
@@ -76,8 +76,18 @@ def read_data_and_labels():
     return data.iloc[train_indices], labels.iloc[train_indices], data.iloc[test_indices], labels.iloc[test_indices]
 
 
+def read_data_and_labels():
+    """
+    :return: A Pandas DataFrame with all data points and their labels
+    """
+    data = read_wav_files()
+    labels = read_labels()
+    return data.join(labels)
+
+
 if __name__ == '__main__':
-    train_data, train_labels, test_data, test_labels = read_data_and_labels()
+
+    train_data, train_labels, test_data, test_labels = read_data_and_labels_by_folds()
 
     print(read_species_list())
 
@@ -96,4 +106,10 @@ if __name__ == '__main__':
     print('\nTest Labels')
     print(test_labels.head())
     print(test_labels.shape)
+
+    complete_data = read_data_and_labels()
+
+    print('\nComplete set')
+    print(complete_data.head())
+    print(complete_data.shape)
 
