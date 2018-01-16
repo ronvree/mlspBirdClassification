@@ -2,6 +2,7 @@ import numpy as np
 import keras as ks
 
 from data_info import get_number_of_species
+from evaluation import Evaluation
 from spectrograms import read_data_as_spectrograms
 from sklearn.utils import shuffle
 from sklearn import metrics
@@ -9,17 +10,13 @@ from sklearn import metrics
 
 # Read relevant data from files
 data = read_data_as_spectrograms()
-
 # Shuffle data
 data = shuffle(data)
 
 # Obtain data dimensions
 number_of_signals = len(data)
 number_of_species = get_number_of_species()
-
-# Obtain spectrogram dimensions
 spectrogram_shape = data['spectrograms'].iloc[0].shape
-print(spectrogram_shape)
 
 # Convert spectrograms to numpy matrix of correct dimensions TODO -- more efficiently!!!
 spectrograms = data['spectrograms'].as_matrix()
@@ -30,7 +27,6 @@ for i in range(number_of_signals):
             fit_data[i][j][k] = spectrograms[i][j][k]
 
 print(fit_data.shape)
-
 # Normalize labels to match NN output
 labels_norm = np.zeros(shape=(number_of_signals, number_of_species))
 for i in range(number_of_signals):
@@ -67,5 +63,7 @@ predictions = model.predict_on_batch(test_data)
 predictions = np.round(predictions)
 
 roc = metrics.roc_auc_score(test_labels.ravel(), predictions.ravel())
+
+Evaluation(test_labels, predictions)
 
 print('Area under ROC curve: {}'.format(roc))
