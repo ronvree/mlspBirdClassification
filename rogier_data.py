@@ -99,50 +99,80 @@ def preprocess_wav(wav, sr):
     # return np.transpose(np.array(Sxx))
 
 
-def get_training_data(append_loc=False):
+def get_training_data():
     result = []
-    locs = []
     train_files = get_training_filenames()
     for file in train_files:
         wav, samplerate = sf.read('data/mlsp_contest_dataset/essential_data/src_wavs/' + file + '.wav')
-        if append_loc:
-            loc = file.split('_')[0][2:]
-            locs.append(loc)
-
         result.append(preprocess_wav(wav, samplerate))
-    return np.array(result), locs
+
+    return np.array(result)
+
+def get_training_locations():
+    locs = []
+    train_files = get_training_filenames()
+    for file in train_files:
+        loc = file.split('_')[0][2:]
+        locs.append(loc)
+    return np.array(locs)
 
 def get_1d_training_data(append_loc=False):
-    features, locations = get_training_data(append_loc)
+    features = get_training_data()
     f_shape = features.shape
     new_features = np.reshape(features, (f_shape[0], f_shape[1] * f_shape[2]))
-    new_features = np.resize(new_features, (f_shape[0], f_shape[1] * f_shape[2] + 1))
-    for l in range(len(locations)):
-        new_features[l][f_shape[1] * f_shape[2]] = locations[l]
+    if append_loc:
+        locations = get_training_locations()
+        new_features = np.resize(new_features, (f_shape[0], f_shape[1] * f_shape[2] + 1))
+        for l in range(len(locations)):
+            new_features[l][f_shape[1] * f_shape[2]] = locations[l]
     return new_features
 
+def get_2d_training_data():
+    features = get_training_data()
+    return np.reshape(features, newshape=(features.shape[0], features.shape[1], features.shape[2]))
+
+def get_3d_training_data():
+    return get_training_data()
 
 
-def get_test_data(append_loc=False):
+def get_test_data():
     result = []
-    locs = []
     test_files = get_test_filenames()
     for file in test_files:
         wav, samplerate = sf.read('data/mlsp_contest_dataset/essential_data/src_wavs/' + file + '.wav')
-        if append_loc:
-            loc = file.split('_')[0][2:]
-            locs.append(loc)
         result.append(preprocess_wav(wav, samplerate))
-    return np.array(result), locs
+    return np.array(result)
+
+def get_test_locations():
+    locs = []
+    test_files = get_test_filenames()
+    for file in test_files:
+        loc = file.split('_')[0][2:]
+        locs.append(loc)
+    return np.array(locs)
 
 def get_1d_test_data(append_loc=False):
-    features, locations = get_test_data(append_loc)
+    features = get_test_data()
     f_shape = features.shape
     new_features = np.reshape(features, (f_shape[0], f_shape[1] * f_shape[2]))
-    new_features = np.resize(new_features, (f_shape[0], f_shape[1] * f_shape[2] + 1))
-    for l in range(len(locations)):
-        new_features[l][f_shape[1] * f_shape[2]] = locations[l]
+    if append_loc:
+        locations = get_test_locations()
+        new_features = np.resize(new_features, (f_shape[0], f_shape[1] * f_shape[2] + 1))
+        for l in range(len(locations)):
+            new_features[l][f_shape[1] * f_shape[2]] = locations[l]
     return new_features
+
+def get_2d_test_data():
+    features = get_test_data()
+    return np.reshape(features, newshape=(features.shape[0], features.shape[1], features.shape[2]))
+
+def get_3d_test_data():
+    return get_test_data()
+
+
+
+
+
 
 
 def get_training_labels():
@@ -165,3 +195,36 @@ def get_roc_test_labels():
 
 def get_num_classes():
     return 19
+
+
+def training_label_variation():
+    labels = get_training_labels()
+    zeros = 0
+    ones = 0
+    for sample in labels:
+        for label in sample:
+            if (label == 1.):
+                ones += 1
+            else:
+                zeros += 1
+    return ones, zeros
+
+
+def test_label_variation():
+    labels = get_test_labels()
+    zeros = 0
+    ones = 0
+    for sample in labels:
+        for label in sample:
+            if label == 1.:
+                ones += 1
+            else:
+                zeros += 1
+    return ones, zeros
+
+
+train_l = training_label_variation()
+print(train_l, sum(train_l))
+
+test_l = test_label_variation()
+print(test_l, sum(test_l))
