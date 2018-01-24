@@ -32,7 +32,7 @@ def read_data_as_spectrograms():
     data['spectrograms'] = pd.Series(conversion_results[:, 2], index=data.index)
 
     data['spectrograms'] = data['spectrograms'].apply(lambda x: gaussian_filter(x, 3))
-    data['spectrograms'] = data['spectrograms'].apply(lambda x: x > threshold_otsu(x))
+    # data['spectrograms'] = data['spectrograms'].apply(lambda x: x > threshold_otsu(x))
 
     return data
 
