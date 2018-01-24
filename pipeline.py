@@ -1,3 +1,7 @@
+import numpy as np
+from scipy.ndimage import gaussian_filter
+from skimage.filters import threshold_otsu
+
 from evaluation_protocols import hold_out_validation, k_fold_cross_validation
 from models import DummyNetwork, DummyConvNetwork, MaximMilakovCNN, RandomForest
 from spectrograms import read_data_as_spectrograms
@@ -10,6 +14,24 @@ complete_data = shuffle(read_data_as_spectrograms())
 
 Xs = complete_data['spectrograms'].as_matrix()
 ys = complete_data['labels'].as_matrix()
+
+mean = np.mean(np.mean(Xs))
+
+flat_Xs = list()
+for x in range(len(Xs)):
+    for y in range(len(Xs[0])):
+        flat_Xs.extend(Xs[x][y])
+
+std = np.std(flat_Xs)
+
+filters = [lambda x: gaussian_filter(x, 3),  # Gaussian filter
+           lambda x: x > threshold_otsu(x),  # Threshold
+           lambda x: (x - mean) / std,
+           ]
+
+for f in filters:
+    for i in range(len(Xs)):
+        Xs[i] = f(Xs[i])
 
 performance_metrics = [lambda x, y: metrics.roc_auc_score(x, y, average='micro')]
 # performance_metrics = [metrics.accuracy_score]
