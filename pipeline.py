@@ -15,18 +15,12 @@ complete_data = shuffle(read_data_as_spectrograms())
 Xs = complete_data['spectrograms'].as_matrix()
 ys = complete_data['labels'].as_matrix()
 
-mean = np.mean(np.mean(Xs))
-
-flat_Xs = list()
-for x in range(len(Xs)):
-    for y in range(len(Xs[0])):
-        flat_Xs.extend(Xs[x][y])
-
-std = np.std(flat_Xs)
+mean = np.mean(Xs)
+std = np.std(Xs)
 
 filters = [lambda x: gaussian_filter(x, 3),  # Gaussian filter
-           lambda x: x > threshold_otsu(x),  # Threshold
-           lambda x: (x - mean) / std,
+           # lambda x: x > threshold_otsu(x),  # Threshold
+           lambda x: (x - mean) / std,  # Input normalization
            ]
 
 for f in filters:
