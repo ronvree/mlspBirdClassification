@@ -1,6 +1,8 @@
 import numpy as np
 from scipy import signal
 import pandas as pd
+from scipy.ndimage.filters import gaussian_filter
+from skimage.filters.thresholding import threshold_otsu
 
 from read_data import read_data_and_labels
 
@@ -22,11 +24,16 @@ def read_data_as_spectrograms():
     train_signals = data['signal'].as_matrix()
     sample_freqs = data['sample_rate'].as_matrix()
     # Convert all signals to spectrograms
-    conversion_results = np.array([signal.spectrogram(xs, fs) for xs, fs in zip(train_signals, sample_freqs)])
+    conversion_results = np.array([signal.spectrogram(xs, fs)
+                                   for xs, fs in zip(train_signals, sample_freqs)])
     # Store result in original DataFrame
     data['sample_freqs'] = pd.Series(conversion_results[:, 0], index=data.index)
     data['segment_times'] = pd.Series(conversion_results[:, 1], index=data.index)
     data['spectrograms'] = pd.Series(conversion_results[:, 2], index=data.index)
+
+    data['spectrograms'] = data['spectrograms'].apply(lambda x: gaussian_filter(x, 3))
+    data['spectrograms'] = data['spectrograms'].apply(lambda x: x > threshold_otsu(x))
+
     return data
 
 
@@ -35,9 +42,11 @@ if __name__ == '__main__':
 
     spec_data = read_data_as_spectrograms()
 
-    spectrogram = spec_data['spectrograms'].iloc[0]
-    sample_freq = spec_data['sample_freqs'].iloc[0]
-    segment_time = spec_data['segment_times'].iloc[0]
+    index = 9
+
+    spectrogram = spec_data['spectrograms'].iloc[index]
+    sample_freq = spec_data['sample_freqs'].iloc[index]
+    segment_time = spec_data['segment_times'].iloc[index]
 
     plt.pcolormesh(segment_time, sample_freq, spectrogram)
     plt.ylabel('Frequency [Hz]')
