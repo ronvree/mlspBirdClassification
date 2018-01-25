@@ -20,9 +20,7 @@ classif = RandomForestClassifier(n_estimators=500, criterion='entropy',
                                      random_state=np.random.RandomState(0))
 classif.fit(features, labels)
 
-
 test_labels = data.get_test_labels()
-
 
 test_features = data.get_1d_test_data(True)
 
@@ -37,6 +35,8 @@ for p in range(predictions.shape[0]):
         predictions[p][bird] = preds[bird][p][1]
     # print(str(test_labels[p]) + " : " + str(predictions[p]))
 #
+from rogier_cnn import birds_correct
+birds_correct(predictions, test_labels)
 # print(predictions)
 roc = metrics.roc_auc_score(test_labels,predictions, average='micro')
 print("AUC: {}".format(roc))
