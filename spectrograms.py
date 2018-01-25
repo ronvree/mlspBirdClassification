@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 import pandas as pd
 
+from preprocessing import gaussian_filter, apply_thresholding
 from read_data import read_data_and_labels
 
 
@@ -28,6 +29,10 @@ def read_data_as_spectrograms():
     data['sample_freqs'] = pd.Series(conversion_results[:, 0], index=data.index)
     data['segment_times'] = pd.Series(conversion_results[:, 1], index=data.index)
     data['spectrograms'] = pd.Series(conversion_results[:, 2], index=data.index)
+
+    # data['spectrograms'] = data['spectrograms'].apply(lambda x: gaussian_filter(x))
+    # data['spectrograms'] = data['spectrograms'].apply(lambda x: apply_thresholding(x))
+
     return data
 
 

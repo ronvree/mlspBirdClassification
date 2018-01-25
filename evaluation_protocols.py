@@ -45,7 +45,7 @@ def k_fold_cross_validation(data, labels, k: int, model: Model, performance_metr
         for i in range(len(performance_metrics)):
             metric_scores[i] += performance_metrics[i](validation_l, classifications)
     # Return average score
-    return metric_scores / float(k)
+    return metric_scores / float(k)  # TODO -- return history of performances per fold
 
 
 def hold_out_validation(data, labels, f: float, model: Model, performance_metrics):
@@ -72,6 +72,7 @@ def hold_out_validation(data, labels, f: float, model: Model, performance_metric
     model.fit(train_data, train_labels)
     # Classify the test data
     classifications = model.predict(test_data)
+    print(classifications)
     classifications = np.round(classifications)
     # Use the test labels to compute each performance metric
     metric_scores = np.zeros(len(performance_metrics))
