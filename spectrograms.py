@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 import pandas as pd
 
+from preprocessing import gaussian_filter, apply_thresholding
 from read_data import read_data_and_labels
 
 
@@ -29,6 +30,9 @@ def read_data_as_spectrograms():
     data['segment_times'] = pd.Series(conversion_results[:, 1], index=data.index)
     data['spectrograms'] = pd.Series(conversion_results[:, 2], index=data.index)
 
+    # data['spectrograms'] = data['spectrograms'].apply(lambda x: gaussian_filter(x))
+    # data['spectrograms'] = data['spectrograms'].apply(lambda x: apply_thresholding(x))
+
     return data
 
 
@@ -37,11 +41,11 @@ if __name__ == '__main__':
 
     spec_data = read_data_as_spectrograms()
 
-    index = 4
+    rec_id = 4
 
-    spectrogram = spec_data['spectrograms'].iloc[index]
-    sample_freq = spec_data['sample_freqs'].iloc[index]
-    segment_time = spec_data['segment_times'].iloc[index]
+    spectrogram = spec_data['spectrograms'].iloc[rec_id]
+    sample_freq = spec_data['sample_freqs'].iloc[rec_id]
+    segment_time = spec_data['segment_times'].iloc[rec_id]
 
     plt.pcolormesh(segment_time, sample_freq, spectrogram)
     plt.ylabel('Frequency [Hz]')
