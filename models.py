@@ -1,4 +1,5 @@
 import keras as ks
+from keras.utils import plot_model
 from sklearn.ensemble import RandomForestClassifier
 
 from data_info import get_number_of_species
@@ -134,7 +135,7 @@ class MaximMilakovCNN(Model):
         self.model.compile(loss='binary_crossentropy',
                            optimizer='sgd',
                            metrics=[ks.metrics.binary_accuracy])
-
+        plot_model(self.model, 'cnn.png')
         print(self.model.summary())
 
     def fit(self, train_data, train_labels):
@@ -146,4 +147,3 @@ class MaximMilakovCNN(Model):
     def pre_process_data(self, data, labels):
         data, labels = super(MaximMilakovCNN, self).pre_process_data(data, labels)
         return data.reshape(data.shape + (1,)), labels
-

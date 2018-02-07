@@ -17,6 +17,8 @@ performance_metrics = [lambda x, y: metrics.roc_auc_score(x, y, average='micro')
 
 model = MaximMilakovCNN(Xs[0].shape)
 
+
+
 performance = hold_out_validation(Xs, ys, 0.6, model, performance_metrics)
 # performance = k_fold_cross_validation(Xs, ys, 10, model, performance_metrics)
 
