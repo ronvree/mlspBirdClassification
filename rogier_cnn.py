@@ -8,10 +8,10 @@ from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, LSTM, GR
     Reshape, BatchNormalization, Concatenate, GlobalMaxPooling2D
 from keras.metrics import binary_accuracy
 from keras.models import Sequential
-from keras.utils import multi_gpu_model
+from keras.utils import multi_gpu_model, plot_model
 from sklearn import metrics
 
-import rogier_data as data
+from rogier_data import BirdData
 
 
 def get_3d_input_shape(cnn_shape):
@@ -184,21 +184,25 @@ def classification_detection_with_location_model(is_sound, is_location, num_clas
     detection_output = Dense(1, activation='sigmoid', name='do')(time_pooling)
 
     c_conv_1 = Dropout(dr)(MaxPooling2D(pool_size=(1, pool_sizes[0]))(
-        BatchNormalization()(Conv2D(c_maps, (3, 3),padding='same', activation='relu')(Conv2D(c_maps, (5, 5),padding='same', activation='relu')(sound_input)))))
+        BatchNormalization()(Conv2D(c_maps, (3, 3), padding='same', activation='relu')(
+            Conv2D(c_maps, (5, 5), padding='same', activation='relu')(sound_input)))))
 
     c_conv_2 = Dropout(dr)(MaxPooling2D(pool_size=(1, pool_sizes[1]))(
-        BatchNormalization()(Conv2D(c_maps, (3, 3),padding='same', activation='relu')(Conv2D(c_maps, (5, 5),padding='same', activation='relu')(
-            c_conv_1)))))
+        BatchNormalization()(Conv2D(c_maps, (3, 3), padding='same', activation='relu')(
+            Conv2D(c_maps, (5, 5), padding='same', activation='relu')(
+                c_conv_1)))))
 
     c_conv_3 = Dropout(dr)(MaxPooling2D(pool_size=(1, pool_sizes[2]))(
-        BatchNormalization()(Conv2D(c_maps, (3, 3),padding='same', activation='relu')(Conv2D(c_maps, (5, 5),padding='same', activation='relu')(
-            c_conv_2)))))
+        BatchNormalization()(Conv2D(c_maps, (3, 3), padding='same', activation='relu')(
+            Conv2D(c_maps, (5, 5), padding='same', activation='relu')(
+                c_conv_2)))))
 
     c_conv_4 = Dropout(dr)(MaxPooling2D(pool_size=(1, pool_sizes[3]))(
-        BatchNormalization()(Conv2D(c_maps, (3, 3),padding='same', activation='relu')(Conv2D(c_maps, (3, 3),padding='same', activation='relu')(
-            c_conv_3)))))
+        BatchNormalization()(Conv2D(c_maps, (3, 3), padding='same', activation='relu')(
+            Conv2D(c_maps, (3, 3), padding='same', activation='relu')(
+                c_conv_3)))))
 
-    c_reshape = Reshape((313, maps))(c_conv_4)
+    c_reshape = Reshape((313, c_maps))(c_conv_4)
 
     c_time_pooling = GlobalMaxPooling1D()(c_reshape)
 
@@ -206,9 +210,9 @@ def classification_detection_with_location_model(is_sound, is_location, num_clas
 
     location_input = Input(shape=is_location, name='li')
 
-    concat = Concatenate()([detection_output, location_input])
-    hidden_layer_1 = Dropout(dr)(Dense(200, activation='relu')(concat))
-    hidden_layer_2 = Dropout(dr)(Dense(200, activation='relu')(hidden_layer_1))
+    concat = Concatenate()([detection_output, classification_output, location_input])
+    hidden_layer_1 = Dropout(dr)(Dense(2000, activation='relu')(concat))
+    hidden_layer_2 = Dropout(dr)(Dense(2000, activation='relu')(hidden_layer_1))
     output_layer = Dense(num_classes, activation='sigmoid', name='mo')(hidden_layer_2)
 
     return Model(inputs=[sound_input, location_input],
@@ -246,57 +250,67 @@ def get_cnn_model(input_shape_cnn, num_classes):
 
 
 def run_cnn_model(multi_gpu=False):
-    print("Begin extracting data")
-    t1 = time.time()
-    features, labels, locations, single_labels = data.get_3d_training_data()
-    print("Got labels with shape " + str(labels.shape))
-    print("Got sound features with shape " + str(features.shape))
-    print("Got location features with shape " + str(locations.shape))
-    input_shape = get_3d_input_shape(features.shape)
-    input_shape_l = (1,)
+    for preprocess in range(3):
+        for balanced_data in range(2):
+            print("Starting 5 rounds with pp:{}, bd:{}".format(preprocess, balanced_data))
+            print("Begin extracting data")
+            t1 = time.time()
+            data = BirdData(from_file=(balanced_data == 1), gaussian=(preprocess == 1), thresholding=(preprocess == 2))
+            features, labels, locations, single_labels = data.get_3d_training_data()
+            print("Got labels with shape " + str(labels.shape))
+            print("Got sound features with shape " + str(features.shape))
+            print("Got location features with shape " + str(locations.shape))
+            input_shape = get_3d_input_shape(features.shape)
+            input_shape_l = (1,)
 
-    num_classes = data.get_num_classes()
+            num_classes = data.get_num_classes()
 
-    test_labels, test_single_labels = data.get_test_labels()
-    print("Got -test- labels with shape " + str(test_labels.shape))
-    test_features = data.get_3d_test_data()
+            test_labels, test_single_labels = data.get_test_labels()
+            print("Got -test- labels with shape " + str(test_labels.shape))
+            test_features = data.get_3d_test_data()
 
-    print("Got -test- sound features with shape " + str(test_features.shape))
+            print("Got -test- sound features with shape " + str(test_features.shape))
 
-    test_locations = data.get_test_locations()
+            test_locations = data.get_test_locations()
 
-    print("Got -test- location features with shape " + str(test_locations.shape))
+            print("Got -test- location features with shape " + str(test_locations.shape))
 
-    print("Done extracting data - {}s -".format(int(time.time() - t1)))
+            print("Done extracting data - {}s -".format(int(time.time() - t1)))
 
-    # model = detection_model(input_shape, num_classes)
-    model = classification_detection_with_location_model(input_shape, input_shape_l, num_classes)
+            # model = detection_model(input_shape, num_classes)
+            # best with original data : (110, 50, 256)
+            # best with balanced data : (110, 70, 256)
+            model = classification_detection_with_location_model(input_shape, input_shape_l, num_classes, maps=70, c_maps=110,
+                                                                 gru_units=256)
+            for i in range(5):
+                if multi_gpu:
+                    model = multi_gpu_model(model, 2)
 
-    if multi_gpu:
-        model = multi_gpu_model(model, 2)
+                model.compile(loss='binary_crossentropy',
+                              optimizer='adam',
+                              metrics=[binary_accuracy])
+                print(model.summary())
 
-    model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
-                  metrics=[binary_accuracy])
-    print(model.summary())
+                model.fit([features, locations], [labels, single_labels, labels], epochs=10, batch_size=32, validation_split=0.1,
+                          verbose=2)
+                #
+                # one_feature = test_features[0:10]
+                # print(one_feature.shape)
+                # conv_spec = model.predict([one_feature, test_locations[0:10]])[0]
+                # [print(x, y) for (x, y) in zip(conv_spec, test_labels[0:10])]
 
-    model.fit([features, locations], [labels, single_labels, labels], epochs=10, batch_size=32, validation_split=0.1,
-              verbose=1)
-    #
-    one_feature = test_features[0:10]
-    print(one_feature.shape)
-    conv_spec = model.predict([one_feature, test_locations[0:10]])[0]
-    [print(x, y) for (x, y) in zip(conv_spec, test_labels[0:10])]
+                predictions = model.predict([test_features, test_locations])
+                # print(model.evaluate([test_features, test_locations], [test_labels, test_single_labels, test_labels]))
+                # birds_correct(predictions, test_labels)
+                roc_mo = metrics.roc_auc_score(test_labels, predictions[0], average='micro')
+                roc_do = metrics.roc_auc_score(test_single_labels, predictions[1], average='micro')
+                roc_co = metrics.roc_auc_score(test_labels, predictions[2], average='micro')
+                print("AUC Detection output      : {}".format(roc_do))
+                print("AUC Classification output : {}".format(roc_co))
+                print("AUC Main output           : {}".format(roc_mo))
 
-    predictions = model.predict([test_features, test_locations])
-    print(model.evaluate([test_features, test_locations], [test_labels, test_single_labels, test_labels]))
-    # birds_correct(predictions, test_labels)
-    roc_mo = metrics.roc_auc_score(test_labels, predictions[0], average='micro')
-    roc_do = metrics.roc_auc_score(test_single_labels, predictions[1], average='micro')
-    roc_co = metrics.roc_auc_score(test_labels, predictions[2], average='micro')
-    print("AUC Detection output      : {}".format(roc_do))
-    print("AUC Classification output : {}".format(roc_co))
-    print("AUC Main output           : {}".format(roc_mo))
+
+# def average
 
 
 def nn_model(input_shape_nn):
@@ -339,7 +353,7 @@ def lstm_nn_model(input_shape_nn, num_classes):
 def run_rnn_model():
     print("Begin extracting data")
     t1 = time.time()
-
+    data = BirdData()
     features, labels, _ = data.get_2d_training_data()
     print("Got labels with shape " + str(labels.shape))
     print("Got features with shape " + str(features.shape))
@@ -388,7 +402,7 @@ def lstm_nn_location_model(shape_main, shape_aux, output_nodes):
 def run_lstm_loc_model():
     print("Begin extracting data")
     t1 = time.time()
-
+    data = BirdData()
     features, labels, locations = data.get_2d_training_data()
     print("Got labels with shape " + str(labels.shape))
     print("Got features with shape " + str(features.shape))
@@ -428,6 +442,7 @@ def run_lstm_loc_model():
 
 def grid_search_params(multi_gpu):
     print("Begin extracting data")
+    data = BirdData()
     t1 = time.time()
     features, labels, locations, single_labels = data.get_3d_training_data()
     print("Got labels with shape " + str(labels.shape))
@@ -453,7 +468,7 @@ def grid_search_params(multi_gpu):
     # model = detection_model(input_shape, num_classes)
     print("Begin grid search")
     feature_mappings = [50, 70, 90, 110]
-    gru_unit_sizes = [32, 64, 128, 256]
+    gru_unit_sizes = [128, 256]
     for d_map in feature_mappings:
         for c_map in feature_mappings:
             for gru in gru_unit_sizes:
@@ -478,17 +493,17 @@ def grid_search_params(multi_gpu):
                 print("AUC Detection output      : {}".format(roc_do))
                 print("AUC Classification output : {}".format(roc_co))
                 print("AUC Main output           : {}".format(roc_mo))
-                quit()
+                # quit()
 
 
 if __name__ == '__main__':
     # run_lstm_loc_model()
     # run_rnn_model()
-    # run_cnn_model()
+    run_cnn_model()
     #
     # pred = np.load('predictions.npy')
     # for p in pred:
     #     print(p)
     #     print(sum(p))
     #
-    grid_search_params(multi_gpu=True)
+    # grid_search_params(multi_gpu=True)
